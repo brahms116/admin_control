@@ -6,34 +6,6 @@ pub struct HttpError {
     msg: Option<String>,
 }
 
-impl From<AdminError> for HttpError {
-    fn from(e: AdminError) -> Self {
-        let code = match e.kind {
-            AdminErrorKind::InputError => 400,
-            _ => 500,
-        };
-
-        HttpError {
-            status_code: code,
-            msg: e.msg,
-        }
-    }
-}
-
-impl From<&AdminError> for HttpError {
-    fn from(e: &AdminError) -> Self {
-        let code = match e.kind {
-            AdminErrorKind::InputError => 400,
-            _ => 500,
-        };
-
-        HttpError {
-            status_code: code,
-            msg: e.msg.clone(),
-        }
-    }
-}
-
 impl Into<Value> for HttpError {
     fn into(self) -> Value {
         let msg = match self.msg {
