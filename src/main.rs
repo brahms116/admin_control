@@ -1,8 +1,7 @@
-mod admin_error;
+mod admin;
 mod command_runners;
 mod errors;
 mod lambda_http;
-mod router;
 mod services;
 
 use lambda_runtime::{service_fn, Error, LambdaEvent};

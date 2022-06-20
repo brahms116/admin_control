@@ -1,13 +1,12 @@
-use super::admin_error::*;
 use super::services::*;
 
 pub fn get_token(
     password: &str,
     correct_password: &str,
     jwt_secret: &str,
-) -> Result<String, AdminErr> {
+) -> Result<String, ()> {
     if password != correct_password {
-        return Err(AdminErr::InvalidCreds);
+        return Err(());
     }
     Ok(auth_service::get_default_token(jwt_secret, 3600))
 }

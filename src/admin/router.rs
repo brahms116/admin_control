@@ -1,39 +1,12 @@
-use crate::admin_error::*;
-use crate::command_runners;
+use super::*;
 use crate::errors::*;
-use crate::services::*;
 use serde_json::{json, Value};
 use std::env;
 
-#[derive(Debug, PartialEq)]
-pub enum Command {
-    Ec2Control,
-    GetToken,
-    Invalid,
-}
-
-impl From<&str> for Command {
-    fn from(command: &str) -> Self {
-        match command {
-            "ec2-control" => Command::Ec2Control,
-            "get-token" => Command::GetToken,
-            "validate-token" => Command::GetToken,
-            _ => Command::Invalid,
-        }
-    }
-}
-impl From<String> for Command {
-    fn from(command: String) -> Self {
-        command.as_str().into()
-    }
-}
-pub struct RouteArgs {
-    pub token: Option<String>,
-    pub command: Option<String>,
-    pub data: Option<Value>,
-}
-
-pub fn route(args: RouteArgs) -> Result<Value, AdminErr> {
+pub fn admin<T: RunCommands>(
+    args: RouteArgs,
+    cmd: T,
+) -> Result<Value, AdminErr> {
     /* Check for envs */
     let env_jwt_secret = env::var("JWT_SECRET")
         .map_err(|_| AdminErr::ConfNone("JWT_SECRET".to_string()))?;
@@ -51,7 +24,7 @@ pub fn route(args: RouteArgs) -> Result<Value, AdminErr> {
     let command_str = args.command.unwrap();
     let command = command_str.clone().into();
     if let Command::Invalid = command {
-        return Err(AdminErr::InvalidCmd(command_str));
+        return Err(AdminErr::InvdCmd(command_str));
     }
 
     /* If theres no token and command requires token */
@@ -61,8 +34,10 @@ pub fn route(args: RouteArgs) -> Result<Value, AdminErr> {
 
     /* Decode token, if there is a token */
     if let Some(token) = args.token {
-        auth_service::decode_default_token(&token, &env_jwt_secret)
-            .map_err(|_| AdminErr::InvalidToken)?;
+        let result = cmd.check_token(&token, &env_jwt_secret);
+        if !result {
+            return Err(AdminErr::InvdToken);
+        }
     }
 
     /* Now the command should be authorised */
@@ -74,11 +49,9 @@ pub fn route(args: RouteArgs) -> Result<Value, AdminErr> {
             if let Some(data) = args.data {
                 if let Some(pwd) = data.get("password") {
                     if let Some(pwd_str) = pwd.as_str() {
-                        let token = command_runners::get_token(
-                            pwd_str,
-                            &env_pwd,
-                            &env_jwt_secret,
-                        )?;
+                        let token = cmd
+                            .get_token(pwd_str, &env_pwd, &env_jwt_secret)
+                            .map_err(|_| AdminErr::InvdCreds)?;
                         return Ok(json!({ "token": token }));
                     }
                     return Err(AdminErr::TypeErr(TypeErr {
@@ -94,7 +67,14 @@ pub fn route(args: RouteArgs) -> Result<Value, AdminErr> {
             if let Some(data) = args.data {
                 if let Some(operation) = data.get("operation") {
                     if let Some(op_str) = operation.as_str() {
-                        todo!()
+                        let op: Ec2Op = op_str.clone().into();
+                        if let Ec2Op::Unknown = op {
+                            return Err(AdminErr::InvdEc2Op(
+                                op_str.to_string(),
+                            ));
+                        }
+                        let res = cmd.ec2_control(&ec2_id, &op);
+                        return res.map(|v| json!(v));
                     }
                     return Err(AdminErr::TypeErr(TypeErr {
                         fieldname: "operation".into(),

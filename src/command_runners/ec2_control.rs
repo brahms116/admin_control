@@ -1,4 +1,3 @@
-use super::admin_error::*;
 use serde_json::Value;
 
 pub enum Operation {
@@ -30,6 +29,6 @@ pub struct ControlParams {
     pub instance_id: String,
 }
 
-pub fn ec2_control() -> Result<Value, AdminErr> {
+pub fn ec2_control() -> Result<Value, ()> {
     todo!()
 }

@@ -5,11 +5,13 @@ pub enum AdminErr {
     ConfNone(String),
     DataNone(String),
     TypeErr(TypeErr),
-    InvalidCmd(String),
+    InvdCmd(String),
+    InvdEc2Op(String),
     CmdNone,
-    InvalidToken,
+    InvdToken,
+    Ec2None,
     TokenNone,
-    InvalidCreds,
+    InvdCreds,
     Unknown,
 }
 
@@ -27,17 +29,17 @@ impl std::fmt::Display for AdminErr {
             Self::TypeErr(err) => {
                 format!("{}", err)
             }
-            Self::InvalidCmd(cmd) => format!(
+            Self::InvdCmd(cmd) => format!(
                 "The given command {} \
                 is invalid, please enter a valid command",
                 cmd
             ),
-            Self::InvalidToken => "The auth token is invalid".to_string(),
+            Self::InvdToken => "The auth token is invalid".to_string(),
             Self::TokenNone => "The auth token is missing".to_string(),
             Self::CmdNone => "The command field is missing,\
                                   add an valid command to it"
                 .to_string(),
-            Self::InvalidCreds => {
+            Self::InvdCreds => {
                 "The provided credientials are invalid".to_string()
             }
             _ => format!("Unknown Error"),
