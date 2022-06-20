@@ -1,4 +1,3 @@
-use aws_sdk_ec2::Client;
 use serde::Serialize;
 use serde_json::Value;
 
@@ -85,6 +84,8 @@ pub trait RunCommands {
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
+
     use super::*;
     struct MockRunner();
 
@@ -115,7 +116,10 @@ mod tests {
     }
 
     #[test]
-    fn jwt_env_error() {
+    fn jwt_env_err() {
+        std::env::remove_var("JWT_SECRET");
+        std::env::remove_var("PASSWORD");
+        std::env::remove_var("EC2_ID");
         let args = RouteArgs {
             token: None,
             command: None,
@@ -128,5 +132,117 @@ mod tests {
             format!("{}", res),
             format!("{}", AdminErr::ConfNone("JWT_SECRET".to_string()))
         );
+    }
+
+    #[test]
+    fn pwd_env_err() {
+        std::env::remove_var("JWT_SECRET");
+        std::env::remove_var("PASSWORD");
+        std::env::remove_var("EC2_ID");
+        std::env::set_var("JWT_SECRET", "12345");
+        let args = RouteArgs {
+            token: None,
+            command: None,
+            data: None,
+        };
+        let res = admin(args, MockRunner());
+        assert!(res.is_err());
+        let res = res.unwrap_err();
+        assert_eq!(
+            format!("{}", res),
+            format!("{}", AdminErr::ConfNone("PWD".to_string()))
+        );
+    }
+
+    #[test]
+    fn ec2_id_env_err() {
+        std::env::remove_var("JWT_SECRET");
+        std::env::remove_var("PASSWORD");
+        std::env::remove_var("EC2_ID");
+        std::env::set_var("JWT_SECRET", "12345");
+        std::env::set_var("PASSWORD", "12345");
+        let args = RouteArgs {
+            token: None,
+            command: None,
+            data: None,
+        };
+        let res = admin(args, MockRunner());
+        assert!(res.is_err());
+        let res = res.unwrap_err();
+        assert_eq!(
+            format!("{}", res),
+            format!("{}", AdminErr::ConfNone("EC2_ID".to_string()))
+        );
+    }
+
+    #[test]
+    fn missing_command() {
+        std::env::remove_var("JWT_SECRET");
+        std::env::remove_var("PASSWORD");
+        std::env::remove_var("EC2_ID");
+        std::env::set_var("JWT_SECRET", "12345");
+        std::env::set_var("PASSWORD", "12345");
+        std::env::set_var("EC2_ID", "12345");
+        let args = RouteArgs {
+            token: None,
+            command: None,
+            data: None,
+        };
+        let res = admin(args, MockRunner());
+        assert!(res.is_err());
+        let res = res.unwrap_err();
+        assert_eq!(format!("{}", res), format!("{}", AdminErr::CmdNone));
+    }
+
+    #[test]
+    fn unauth() {
+        std::env::set_var("JWT_SECRET", "12345");
+        std::env::set_var("PASSWORD", "12345");
+        std::env::set_var("EC2_ID", "12345");
+        let args = RouteArgs {
+            token: None,
+            command: Some("ec2-control".to_string()),
+            data: None,
+        };
+        let res = admin(args, MockRunner());
+        assert!(res.is_err());
+        let res = res.unwrap_err();
+        assert_eq!(format!("{}", res), format!("{}", AdminErr::TokenNone));
+    }
+
+    #[test]
+    fn get_token() {
+        std::env::set_var("JWT_SECRET", "12345");
+        std::env::set_var("PASSWORD", "12345");
+        std::env::set_var("EC2_ID", "12345");
+        let args = RouteArgs {
+            token: None,
+            command: Some("get-token".to_string()),
+            data: Some(json!({
+                "password":"12345"
+            })),
+        };
+        let res = admin(args, MockRunner());
+        assert!(res.is_ok());
+        let res = res.unwrap();
+        assert_eq!(json!({"token":"12345"}), res)
+    }
+
+    #[test]
+    fn get_status() {
+        std::env::set_var("JWT_SECRET", "12345");
+        std::env::set_var("PASSWORD", "12345");
+        std::env::set_var("EC2_ID", "12345");
+        let args = RouteArgs {
+            token: Some("1234".to_string()),
+            command: Some("ec2-control".to_string()),
+            data: Some(json!({
+                "operation":"on"
+            })),
+        };
+        let res = admin(args, MockRunner());
+        assert!(res.is_ok());
+        let res = res.unwrap();
+        assert_eq!(json!({"status":"On","ip":"12.3.45.3"}), res)
     }
 }
