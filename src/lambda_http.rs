@@ -21,7 +21,7 @@ pub fn lambda_response(body: Value, code: i32) -> Value {
         "headers":{
             "Content-Type":"application/json"
         },
-        "body":body
+        "body":body.to_string()
     });
 }
 
@@ -76,6 +76,13 @@ mod tests {
             age: 9,
         };
         let response = lambda_response(json!(person), 200);
+        let body = json!({
+            "firstName":"John",
+            "lastName":"Doe",
+            "age":9
+        })
+        .to_string();
+
         assert_eq!(
             json!(response),
             json!({
@@ -83,11 +90,7 @@ mod tests {
                 "headers":{
                     "Content-Type":"application/json"
                 },
-                "body":{
-                    "firstName":"John",
-                    "lastName":"Doe",
-                    "age":9
-                }
+                "body":body
             })
         )
     }

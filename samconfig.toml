@@ -8,5 +8,5 @@ s3_prefix = "rust-control"
 region = "ap-southeast-2"
 confirm_changeset = true
 capabilities = "CAPABILITY_IAM"
-disable_rollback = true
+disable_rollback = false
 image_repositories = []
