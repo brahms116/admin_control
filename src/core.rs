@@ -33,35 +33,18 @@ impl From<String> for Command {
 }
 
 #[derive(Debug)]
-/// A container for formatting a Type Err
-pub struct TypeErr {
-    pub fieldname: String,
-    pub recieved_type: String,
-    pub expected_type: String,
-}
-
-impl fmt::Display for TypeErr {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f,"For the field {}, we were expecting type {}, but found {} instead.\
-        Try using the correct type", self.fieldname, self.expected_type, self.recieved_type)
-    }
-}
-
-impl std::error::Error for TypeErr {}
-
-#[derive(Debug)]
 /// All possible errors within the application
 pub enum AdminErr {
     ConfNone(String),
     DataNone,
     InvdData(String),
-    TypeErr(TypeErr),
     InvdCmd(String),
     InvdEc2Op(String),
     CmdNone,
     InvdToken,
     Ec2None,
     TokenNone,
+    Ec2Unknown(String),
     InvdCreds,
     Unknown,
 }
@@ -76,9 +59,6 @@ impl std::fmt::Display for AdminErr {
                 )
             }
             Self::InvdData(msg) => msg.to_string(),
-            Self::TypeErr(err) => {
-                format!("{}", err)
-            }
             Self::InvdCmd(cmd) => format!(
                 "The given command {} \
                 is invalid, please enter a valid command",
@@ -92,7 +72,12 @@ impl std::fmt::Display for AdminErr {
             Self::InvdCreds => {
                 "The provided credientials are invalid".to_string()
             }
-            _ => format!("Unknown Error"),
+            Self::InvdEc2Op(op) => {
+                format!("{}, is an invalid ec2 operation", op)
+            }
+            Self::Ec2None => "Ec2 Instance not found".to_string(),
+            Self::Ec2Unknown(msg) => format!("Ec2 Error: {}", msg),
+            Self::Unknown => format!("Unknown Error"),
         };
         write!(f, "{}", msg)
     }
@@ -131,13 +116,15 @@ pub enum Ec2Status {
     Off,
     On,
     Pending,
+    Terminated,
+    Unknown,
 }
 
 /// Response from EC2 control
 #[derive(Serialize)]
 pub struct Ec2CtrlRes {
-    status: Ec2Status,
-    ip: String,
+    pub status: Ec2Status,
+    pub ip: Option<String>,
 }
 
 /// Type of operation to be performed by EC2 control
@@ -171,4 +158,19 @@ pub trait Cmd {
     async fn check_token(&self, token: &str) -> bool;
     async fn get_token(&self, pwd: &str) -> Result<String, AdminErr>;
     async fn ec2_control(&self, op: &Ec2Op) -> Result<Ec2CtrlRes, AdminErr>;
+}
+
+#[async_trait]
+/// Can provide auth service
+pub trait Auth {
+    async fn get_token(&self, pwd: &str) -> Result<String, AdminErr>;
+    async fn validate_token(&self, token: &str) -> bool;
+}
+
+#[async_trait]
+/// Can provide ec2 control service
+pub trait Ec2Ctrl {
+    async fn status(&self) -> Result<Ec2CtrlRes, AdminErr>;
+    async fn on(&self) -> Result<Ec2CtrlRes, AdminErr>;
+    async fn off(&self) -> Result<Ec2CtrlRes, AdminErr>;
 }

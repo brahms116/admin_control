@@ -1,6 +1,5 @@
 mod command_runners;
 mod core;
-mod errors;
 mod lambda_http;
 mod router;
 mod services;

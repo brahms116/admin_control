@@ -1,13 +1,45 @@
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, Validation};
+use super::core::*;
+use async_trait::async_trait;
+use jsonwebtoken::{
+    decode, encode, DecodingKey, EncodingKey, Header, Validation,
+};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+pub struct AuthService {
+    secret: String,
+    pwd: String,
+}
+
+impl AuthService {
+    pub fn new() -> Result<AuthService, AdminErr> {
+        let secret = std::env::var("JWT_SECRET")
+            .map_err(|_| AdminErr::ConfNone("JWT_SECRET".to_string()))?;
+        let pwd = std::env::var("PWD")
+            .map_err(|_| AdminErr::ConfNone("PWD".to_string()))?;
+        Ok(AuthService { pwd, secret })
+    }
+}
+
+#[async_trait]
+impl Auth for AuthService {
+    async fn get_token(&self, pwd: &str) -> Result<String, AdminErr> {
+        if pwd != self.pwd {
+            return Err(AdminErr::InvdCreds);
+        }
+        return Ok(get_default_token(&self.secret, 3600));
+    }
+    async fn validate_token(&self, token: &str) -> bool {
+        decode_default_token(token, &self.secret).is_ok()
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Claims {
     exp: usize,
 }
 
-pub fn get_default_token(secret: &str, exp_offset: u64) -> String {
+fn get_default_token(secret: &str, exp_offset: u64) -> String {
     let elasped = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("time travel")
@@ -23,9 +55,13 @@ pub fn get_default_token(secret: &str, exp_offset: u64) -> String {
     .unwrap()
 }
 
-pub fn decode_default_token(token: &str, secret: &str) -> Result<(), ()> {
+fn decode_default_token(token: &str, secret: &str) -> Result<(), ()> {
     let val = Validation::default();
-    let result = decode::<Claims>(&token, &DecodingKey::from_secret(secret.as_ref()), &val);
+    let result = decode::<Claims>(
+        &token,
+        &DecodingKey::from_secret(secret.as_ref()),
+        &val,
+    );
     result.map(|_| ()).map_err(|_| ())
 }
 
