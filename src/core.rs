@@ -6,7 +6,6 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::fmt;
 
 #[derive(Debug, PartialEq)]
 /// Type of commands which can be run

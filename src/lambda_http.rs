@@ -1,8 +1,8 @@
 use serde_json::{json, Value};
 
 pub struct HttpError {
-    status_code: i32,
-    msg: Option<String>,
+    pub status_code: i32,
+    pub msg: Option<String>,
 }
 
 impl Into<Value> for HttpError {
@@ -25,7 +25,7 @@ pub fn lambda_response(body: Value, code: i32) -> Value {
     });
 }
 
-pub fn command_from_req(req: Value) -> Option<String> {
+pub fn command_from_req(req: &Value) -> Option<String> {
     let mut body = req.get("body");
     if let Some(body) = body.take() {
         if let Some(command) = body.get("command") {
@@ -37,7 +37,7 @@ pub fn command_from_req(req: Value) -> Option<String> {
     None
 }
 
-pub fn token_from_req(req: Value) -> Option<String> {
+pub fn token_from_req(req: &Value) -> Option<String> {
     let mut headers = req.get("headers");
     if let Some(headers) = headers.take() {
         if let Some(auth) = headers.get("Authorization").take() {
@@ -48,7 +48,7 @@ pub fn token_from_req(req: Value) -> Option<String> {
     }
     None
 }
-pub fn data_from_req(req: Value) -> Option<Value> {
+pub fn data_from_req(req: &Value) -> Option<Value> {
     if let Some(body) = req.get("body").take() {
         return body.get("data").map(|e| e.clone());
     }
@@ -99,7 +99,7 @@ mod tests {
                 "command":"ec2-control"
             }
         });
-        let command = command_from_req(correct).unwrap();
+        let command = command_from_req(&correct).unwrap();
         assert_eq!(command, "ec2-control");
     }
 
@@ -110,7 +110,7 @@ mod tests {
                 "data":"hello"
             }
         });
-        let data = data_from_req(req).unwrap();
+        let data = data_from_req(&req).unwrap();
         let string = data.as_str().unwrap();
         assert_eq!("hello", string)
     }
@@ -123,11 +123,11 @@ mod tests {
             }
         });
 
-        let token = token_from_req(req).unwrap();
+        let token = token_from_req(&req).unwrap();
         assert_eq!("tokenaswhatfeel".to_string(), token);
 
         let req = json!({});
-        let token = token_from_req(req);
+        let token = token_from_req(&req);
         assert_eq!(None, token);
     }
 }
