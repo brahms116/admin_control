@@ -19,7 +19,8 @@ pub fn lambda_response(body: Value, code: i32) -> Value {
     return json!({
         "statusCode":code,
         "headers":{
-            "Content-Type":"application/json"
+            "Content-Type":"application/json",
+            "Access-Control-Origin":"*"
         },
         "body":body.to_string()
     });
