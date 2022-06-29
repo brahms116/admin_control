@@ -9,7 +9,7 @@ impl From<AdminErr> for HttpError {
             | AdminErr::Ec2None
             | AdminErr::Unknown
             | AdminErr::Ec2Unknown(_) => 500,
-            AdminErr::InvdToken => 403,
+            AdminErr::InvdToken | AdminErr::InvdCreds => 403,
             _ => 400,
         };
 

@@ -20,7 +20,7 @@ pub fn lambda_response(body: Value, code: i32) -> Value {
         "statusCode":code,
         "headers":{
             "Content-Type":"application/json",
-            "Access-Control-Origin":"*"
+            "Access-Control-Allow-Origin":"*"
         },
         "body":body.to_string()
     });
